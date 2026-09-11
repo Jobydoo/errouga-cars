@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Errouga Car Manager | Logiciel de Gestion de Location - Mohamed Rouga</title>
+  <meta name="description" content="Système de gestion de location de voiture pour Errouga Car Agency Marrakech. Calendrier de disponibilité, gestion de flotte, contrats de location officiels et espace propriétaire Mohamed Rouga.">
+  <link rel="icon" type="image/svg+xml" href="assets/images/logo.svg">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="app-toast" style="display: none;"></div>
+
+  <!-- ========================================================================
+       ÉCRAN DE CONNEXION PROPRIÉTAIRE (AUTH OVERLAY)
+       ======================================================================== -->
+  <div id="auth-overlay" class="auth-overlay">
+    <div class="auth-card">
+      <img src="assets/images/logo.svg" alt="Errouga Car Logo" class="auth-logo">
+      <h1 class="auth-title">Espace Propriétaire</h1>
+      <p class="auth-sub">Portail de gestion de l'agence Errouga Car - Marrakech</p>
+
+      <form id="auth-login-form" class="auth-form">
+        <div class="form-group">
+          <label class="form-label" for="auth-username">Identifiant / Utilisateur</label>
+          <input type="text" id="auth-username" class="form-control" placeholder="ex: rouga" value="rouga" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="auth-password">Mot de passe ou Code PIN</label>
+          <input type="password" id="auth-password" class="form-control pin-display" placeholder="••••" value="admin" required>
+        </div>
+
+        <div id="auth-error-msg" style="display: none; color: var(--accent-red); font-size: 0.8rem; font-weight: 700;"></div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 8px;">
+          Se Connecter à l'Agence
+        </button>
+      </form>
+
+      <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border-subtle);">
+        <p style="font-size: 0.76rem; color: var(--text-dim); margin-bottom: 10px;">Accès rapide en 1 clic :</p>
+        <div class="quick-profiles-row">
+          <div id="quick-login-rouga" class="profile-chip">
+            <div class="profile-chip-name">👑 M. Mohamed Rouga</div>
+            <div class="profile-chip-role">Directeur Général (Admin)</div>
+          </div>
+          <div id="quick-login-staff" class="profile-chip">
+            <div class="profile-chip-name">Reception Agence</div>
+            <div class="profile-chip-role">Guéliz / Aéroports</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       APPLICATION PRINCIPALE
+       ======================================================================== -->
+  <div class="app-container">
+
+    <!-- BARRE LATÉRALE (SIDEBAR) -->
+    <aside id="main-sidebar" class="sidebar">
+      <div class="sidebar-header">
+        <img src="assets/images/logo.svg" alt="Errouga Car" class="sidebar-logo">
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-section-title">Navigation Principale</div>
+        <button class="nav-item active" data-view="dashboard">
+          <span class="nav-icon">📊</span>
+          <span>Tableau de Bord</span>
+        </button>
+        <button class="nav-item" data-view="availability">
+          <span class="nav-icon">📅</span>
+          <span>Planning & Disponibilité</span>
+          <span class="nav-badge" id="nav-badge-timeline">Gantt</span>
+        </button>
+        <button class="nav-item" data-view="fleet">
+          <span class="nav-icon">🚗</span>
+          <span>Flotte Véhicules</span>
+          <span class="nav-badge" id="nav-badge-fleet">4</span>
+        </button>
+        <button class="nav-item" data-view="bookings">
+          <span class="nav-icon">📑</span>
+          <span>Réservations & Contrats</span>
+          <span class="nav-badge" id="nav-badge-bookings">2</span>
+        </button>
+
+        <div class="nav-section-title">Opérations & Finance</div>
+        <button class="nav-item" data-view="customers">
+          <span class="nav-icon">👥</span>
+          <span>Fichier Clients (CRM)</span>
+        </button>
+        <button class="nav-item" data-view="finance">
+          <span class="nav-icon">💰</span>
+          <span>Caisse & Règlements</span>
+        </button>
+        <button class="nav-item" data-view="settings">
+          <span class="nav-icon">⚙️</span>
+          <span>Agence & Sauvegarde</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-card">
+          <div class="user-avatar" id="session-user-avatar">MR</div>
+          <div class="user-info">
+            <div class="user-name" id="session-user-name">Mohamed Rouga</div>
+            <div class="user-role" id="session-user-role">Propriétaire & Gérant</div>
+          </div>
+          <button id="btn-logout" class="btn-lock" title="Verrouiller la session">🔒</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ZONE PRINCIPALE (MAIN WRAPPER) -->
+    <main class="main-wrapper">
+
+      <!-- TOPBAR HEADER -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <button id="btn-menu-toggle" class="btn btn-secondary btn-icon-only btn-menu-toggle" style="display: none;">☰</button>
+          <h2 id="page-current-title" class="page-title">Tableau de Bord & Activité</h2>
+          <span class="agency-badge">📍 Marrakech - Casablanca</span>
+        </div>
+
+        <div class="topbar-right">
+          <a id="header-agency-phone" href="tel:+212660990242" class="agency-phone-quick" title="Appeler l'assistance">
+            📞 +212 660-990242
+          </a>
+          <button id="btn-topbar-new-booking" class="btn btn-primary" onclick="BookingModule.openNewBookingModal()">
+            <span>➕ Nouvelle Réservation</span>
+          </button>
+          <button id="btn-open-add-car" class="btn btn-secondary" onclick="AppModule.openAddCarModal()">
+            <span>🚗 Nouveau Véhicule</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- ====================================================================
+           VUE 1 : TABLEAU DE BORD (DASHBOARD)
+           ==================================================================== -->
+      <section id="view-dashboard" class="view-container active">
+        
+        <!-- COMPTEURS STATISTIQUES (KPIS) -->
+        <div class="grid-stats">
+          <div class="stat-card stat-success">
+            <div class="stat-icon-wrapper" style="color: #10B981; font-size: 1.5rem;">🚗</div>
+            <div class="stat-info">
+              <div class="stat-label">Disponibles Immédiats</div>
+              <div class="stat-value" id="stat-available-cars">0</div>
+              <div class="stat-sub">Prêts au départ</div>
+            </div>
+          </div>
+
+          <div class="stat-card stat-primary">
+            <div class="stat-icon-wrapper" style="color: #3B82F6; font-size: 1.5rem;">🔑</div>
+            <div class="stat-info">
+              <div class="stat-label">En Location</div>
+              <div class="stat-value" id="stat-rented-cars">0</div>
+              <div class="stat-sub">Contrats en cours</div>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon-wrapper" style="color: var(--gold-400); font-size: 1.5rem;">🚘</div>
+            <div class="stat-info">
+              <div class="stat-label">Total Flotte</div>
+              <div class="stat-value" id="stat-total-cars">4</div>
+              <div class="stat-sub">Véhicules enregistrés</div>
+            </div>
+          </div>
+
+          <div class="stat-card stat-warning">
+            <div class="stat-icon-wrapper" style="color: var(--gold-500); font-size: 1.5rem;">📈</div>
+            <div class="stat-info">
+              <div class="stat-label">Taux d'Occupation</div>
+              <div class="stat-value" id="stat-occupancy-rate">50%</div>
+              <div class="stat-sub">Activité de la flotte</div>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon-wrapper" style="color: var(--gold-400); font-size: 1.5rem;">💵</div>
+            <div class="stat-info">
+              <div class="stat-label">Chiffre d'Affaires</div>
+              <div class="stat-value" id="stat-revenue-month">0 DH</div>
+              <div class="stat-sub">Contrats du mois</div>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon-wrapper" style="color: #A855F7; font-size: 1.5rem;">🛡️</div>
+            <div class="stat-info">
+              <div class="stat-label">Cautions Bloquées</div>
+              <div class="stat-value" id="stat-active-deposits">0 DH</div>
+              <div class="stat-sub">Garanties en cours</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- VÉRIFICATEUR RAPIDE DE DISPONIBILITÉ -->
+        <div class="quick-checker-bar">
+          <div class="checker-header">
+            <div class="checker-title">
+              <span>⚡ Vérificateur Rapide de Disponibilité</span>
+            </div>
+            <span style="font-size: 0.8rem; color: var(--text-dim);">Idéal quand un client appelle ou écrit sur WhatsApp</span>
+          </div>
+
+          <div class="checker-form">
+            <div class="form-group">
+              <label class="form-label">Date & Heure de Prise en charge</label>
+              <input type="datetime-local" id="quick-check-start" class="form-control">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Date & Heure de Restitution</label>
+              <input type="datetime-local" id="quick-check-end" class="form-control">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Catégorie souhaitée</label>
+              <select id="quick-check-category" class="form-control">
+                <option value="">Toutes les catégories</option>
+                <option value="Citadine">Citadines (Clio 5, 208)</option>
+                <option value="Berline">Berlines (Hyundai Accent)</option>
+                <option value="SUV">SUV & 4x4 (Dacia Duster)</option>
+              </select>
+            </div>
+            <button id="btn-run-checker" class="btn btn-primary">
+              🔍 Trouver les Véhicules Libres
+            </button>
+          </div>
+
+          <div id="quick-check-results" style="display: none;"></div>
+        </div>
+
+        <!-- ALERTES ET SUIVI OPÉRATIONNEL -->
+        <div class="section-card">
+          <div class="section-header">
+            <h3 class="section-title">🔔 Alertes & Notifications du Jour</h3>
+          </div>
+          <div id="dashboard-alerts-box"></div>
+        </div>
+
+        <!-- DERNIÈRES RÉSERVATIONS -->
+        <div class="section-card">
+          <div class="section-header">
+            <h3 class="section-title">📋 Dernières Réservations & Contrats</h3>
+            <button class="btn btn-sm btn-secondary" onclick="AppModule.switchView('bookings')">Voir Tout (Tableau complet) →</button>
+          </div>
+          <div class="data-table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>N° Contrat</th>
+                  <th>Client</th>
+                  <th>Véhicule</th>
+                  <th>Période</th>
+                  <th>Total</th>
+                  <th>Statut</th>
+                  <th style="text-align: right;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-recent-bookings"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ====================================================================
+           VUE 2 : PLANNING & CALENDRIER GANTT (AVAILABILITY)
+           ==================================================================== -->
+      <section id="view-availability" class="view-container">
+        <div class="section-card">
+          <div class="section-header">
+            <div>
+              <h3 class="section-title">📅 Planning Interactif de Disponibilité (Vue Gantt)</h3>
+              <p style="font-size: 0.82rem; color: var(--text-dim); margin-top: 4px;">
+                Visualisez l'occupation de chaque voiture jour par jour. Cliquez sur une case vide pour créer une réservation, ou sur une réservation existante pour voir son contrat.
+              </p>
+            </div>
+            <div style="display: flex; gap: 10px;">
+              <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem; color: #FFF;">
+                <span style="width: 12px; height: 12px; border-radius: 3px; background: #2563EB;"></span> En Location
+              </span>
+              <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem; color: #FFF;">
+                <span style="width: 12px; height: 12px; border-radius: 3px; background: #D97706;"></span> Confirmée
+              </span>
+            </div>
+          </div>
+
+          <div class="timeline-container">
+            <table class="timeline-table">
+              <thead>
+                <tr id="timeline-header-days"></tr>
+              </thead>
+              <tbody id="timeline-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ====================================================================
+           VUE 3 : GESTION DE LA FLOTTE (FLEET)
+           ==================================================================== -->
+      <section id="view-fleet" class="view-container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+          <div>
+            <h3 style="font-size: 1.4rem; font-weight: 800; color: #FFF;">Flotte Automobile Errouga Car</h3>
+            <p style="font-size: 0.85rem; color: var(--text-dim);">Véhicules officiels du parc à Marrakech et Casablanca</p>
+          </div>
+          <button class="btn btn-primary" onclick="AppModule.openAddCarModal()">
+            ➕ Ajouter un Véhicule à la Flotte
+          </button>
+        </div>
+
+        <div id="fleet-cards-grid" class="fleet-grid"></div>
+      </section>
+
+      <!-- ====================================================================
+           VUE 4 : RÉSERVATIONS & CONTRATS (BOOKINGS)
+           ==================================================================== -->
+      <section id="view-bookings" class="view-container">
+        <div class="section-card">
+          <div class="section-header">
+            <h3 class="section-title">📑 Registre des Réservations & Contrats</h3>
+            <button class="btn btn-primary" onclick="BookingModule.openNewBookingModal()">
+              ➕ Nouvelle Réservation
+            </button>
+          </div>
+
+          <div class="data-table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>N° Contrat</th>
+                  <th>Client</th>
+                  <th>Véhicule</th>
+                  <th>Dates (Départ → Retour)</th>
+                  <th>Tarif / Règlement</th>
+                  <th>Caution</th>
+                  <th>Statut</th>
+                  <th style="text-align: right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-all-bookings"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ====================================================================
+           VUE 5 : FICHIER CLIENTS CRM (CUSTOMERS)
+           ==================================================================== -->
+      <section id="view-customers" class="view-container">
+        <div class="section-card">
+          <div class="section-header">
+            <h3 class="section-title">👥 Répertoire Clients & Locataires</h3>
+          </div>
+
+          <div class="data-table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Nom & Prénom</th>
+                  <th>Pièce d'Identité</th>
+                  <th>Permis de Conduire</th>
+                  <th>Téléphone & WhatsApp</th>
+                  <th>Adresse</th>
+                  <th>Historique</th>
+                  <th style="text-align: right;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-all-customers"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ====================================================================
+           VUE 6 : CAISSE & FACTURATION (FINANCE)
+           ==================================================================== -->
+      <section id="view-finance" class="view-container">
+        <div class="grid-stats">
+          <div class="stat-card stat-success">
+            <div class="stat-icon-wrapper" style="color: #10B981; font-size: 1.5rem;">💵</div>
+            <div class="stat-info">
+              <div class="stat-label">Total des Encaissements</div>
+              <div class="stat-value" id="finance-total-caisse">0 DH</div>
+              <div class="stat-sub">Caisse globale encaissée</div>
+            </div>
+          </div>
+
+          <div class="stat-card stat-warning">
+            <div class="stat-icon-wrapper" style="color: var(--gold-500); font-size: 1.5rem;">🛡️</div>
+            <div class="stat-info">
+              <div class="stat-label">Cautions Actives Détenues</div>
+              <div class="stat-value" id="finance-total-deposits">0 DH</div>
+              <div class="stat-sub">En attente de restitution</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <div class="section-header">
+            <h3 class="section-title">💳 Journal des Transactions & Paiements</h3>
+          </div>
+          <div class="data-table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Réf. Reçu</th>
+                  <th>Date</th>
+                  <th>N° Contrat</th>
+                  <th>Client</th>
+                  <th>Type de Transaction</th>
+                  <th>Mode de Paiement</th>
+                  <th>Montant Encaissé</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-all-payments"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ====================================================================
+           VUE 7 : PARAMÈTRES DE L'AGENCE & SAUVEGARDE (SETTINGS)
+           ==================================================================== -->
+      <section id="view-settings" class="view-container">
+        <div class="section-card">
+          <div class="section-header">
+            <h3 class="section-title">🏢 Informations de l'Agence Errouga Car</h3>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; margin-bottom: 24px;">
+            <div class="form-group">
+              <label class="form-label">Nom de l'Agence</label>
+              <input type="text" id="set-agency-name" class="form-control">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Gérant & Propriétaire</label>
+              <input type="text" id="set-agency-owner" class="form-control">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Téléphone Principal (WhatsApp)</label>
+              <input type="text" id="set-agency-phone1" class="form-control">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Téléphone Secondaire</label>
+              <input type="text" id="set-agency-phone2" class="form-control">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Email de contact</label>
+              <input type="email" id="set-agency-email" class="form-control">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Adresse Siège (Marrakech)</label>
+              <input type="text" id="set-agency-address" class="form-control">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Registre du Commerce (RC)</label>
+              <input type="text" id="set-agency-rc" class="form-control">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Identifiant Commun Entreprise (ICE)</label>
+              <input type="text" id="set-agency-ice" class="form-control">
+            </div>
+          </div>
+
+          <button id="btn-save-settings" class="btn btn-primary">
+            💾 Enregistrer les Modifications
+          </button>
+        </div>
+
+        <div class="section-card">
+          <div class="section-header">
+            <h3 class="section-title">📦 Sauvegarde & Sécurité des Données Locales</h3>
+          </div>
+
+          <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 18px;">
+            L'application fonctionne à 100% en local et conserve vos données dans le navigateur. Vous pouvez exporter une copie de sauvegarde sur votre ordinateur ou restaurer une sauvegarde précédente à tout moment.
+          </p>
+
+          <div style="display: flex; gap: 14px; flex-wrap: wrap;">
+            <button id="btn-export-db" class="btn btn-secondary">
+              📥 Télécharger la Sauvegarde Complète (JSON)
+            </button>
+            <label class="btn btn-secondary" style="margin: 0; cursor: pointer;">
+              📤 Restaurer une Sauvegarde
+              <input type="file" id="input-import-db" accept=".json" style="display: none;">
+            </label>
+            <button id="btn-reset-db" class="btn btn-danger" style="margin-left: auto;">
+              ⚠️ Réinitialiser Données d'Origine Errouga
+            </button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ========================================================================
+       MODAL 1 : NOUVELLE RÉSERVATION
+       ======================================================================== -->
+  <div id="modal-booking" class="modal-backdrop">
+    <div class="modal-dialog modal-xl">
+      <div class="modal-header">
+        <h3 class="modal-title">Nouvelle Réservation & Contrat</h3>
+        <button class="modal-close" type="button">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="form-new-booking">
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+            <!-- Choix Véhicule -->
+            <div class="form-group">
+              <label class="form-label">Véhicule à Louer *</label>
+              <select id="book-car-select" class="form-control" required></select>
+            </div>
+
+            <!-- Client Existant ou Nouveau -->
+            <div class="form-group">
+              <label class="form-label">Client *</label>
+              <select id="book-customer-select" class="form-control"></select>
+            </div>
+          </div>
+
+          <!-- Champs Nouveau Client si sélectionné -->
+          <div id="new-client-fields" style="display: none; background: rgba(255,255,255,0.02); border: 1px dashed var(--border-highlight); border-radius: var(--radius-sm); padding: 16px; margin-bottom: 20px;">
+            <h4 style="font-size: 0.88rem; font-weight: 800; color: var(--gold-400); margin-bottom: 12px;">Informations du Nouveau Client</h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
+              <div class="form-group">
+                <label class="form-label">Prénom *</label>
+                <input type="text" id="cust-new-firstname" class="form-control" placeholder="ex: Yassine">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Nom *</label>
+                <input type="text" id="cust-new-lastname" class="form-control" placeholder="ex: Tazi">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Téléphone / WhatsApp *</label>
+                <input type="tel" id="cust-new-phone" class="form-control" placeholder="+212 6...">
+              </div>
+              <div class="form-group">
+                <label class="form-label">CIN ou Passeport</label>
+                <input type="text" id="cust-new-cin" class="form-control" placeholder="AB123456">
+              </div>
+              <div class="form-group">
+                <label class="form-label">N° Permis de Conduire</label>
+                <input type="text" id="cust-new-permis" class="form-control" placeholder="B/12345">
+              </div>
+            </div>
+          </div>
+
+          <!-- Dates & Lieux -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 20px;">
+            <div class="form-group">
+              <label class="form-label">Prise en charge (Date & Heure) *</label>
+              <input type="datetime-local" id="book-start-date" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Restitution (Date & Heure) *</label>
+              <input type="datetime-local" id="book-end-date" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Lieu de Départ *</label>
+              <select id="book-pickup-loc" class="form-control"></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Lieu de Retour *</label>
+              <select id="book-dropoff-loc" class="form-control"></select>
+            </div>
+          </div>
+
+          <!-- Options & Suppléments -->
+          <div style="margin-bottom: 20px;">
+            <label class="form-label" style="margin-bottom: 8px;">Options & Équipements Complémentaires</label>
+            <div id="book-options-container"></div>
+          </div>
+
+          <!-- Paiement & Caution -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 20px;">
+            <div class="form-group">
+              <label class="form-label">Acompte Versé Immédiatement (DH)</label>
+              <input type="number" id="book-paid-amount" class="form-control" min="0" value="0">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Mode de Paiement de l'Acompte</label>
+              <select id="book-payment-method" class="form-control">
+                <option value="Espèces">Espèces</option>
+                <option value="Carte Bancaire">Carte Bancaire (TPE)</option>
+                <option value="Virement">Virement Bancaire</option>
+                <option value="Chèque">Chèque</option>
+              </select>
+            </div>
+            <div class="form-group" style="grid-column: span 2;">
+              <label class="form-label">Notes & Instructions de Livraison</label>
+              <input type="text" id="book-notes" class="form-control" placeholder="Numéro de vol, terminal, code villa, etc.">
+            </div>
+          </div>
+
+          <!-- Récapitulatif Tarifaire Dynamique -->
+          <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: var(--radius-sm); padding: 18px; display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px;">
+            <div>
+              <div style="font-size: 0.75rem; color: var(--text-dim);">Durée de location</div>
+              <div id="calc-days-display" style="font-size: 1.1rem; font-weight: 800; color: #FFF;">0 jour(s)</div>
+            </div>
+            <div>
+              <div style="font-size: 0.75rem; color: var(--text-dim);">Tarif journalier</div>
+              <div id="calc-rate-display" style="font-size: 1.1rem; font-weight: 800; color: var(--gold-400);">0 DH/j</div>
+            </div>
+            <div>
+              <div style="font-size: 0.75rem; color: var(--text-dim);">Sous-total Véhicule</div>
+              <div id="calc-car-subtotal" style="font-size: 1.1rem; font-weight: 800; color: #FFF;">0 DH</div>
+            </div>
+            <div>
+              <div style="font-size: 0.75rem; color: var(--text-dim);">Sous-total options</div>
+              <div id="calc-options-subtotal" style="font-size: 1.1rem; font-weight: 800; color: #FFF;">0 DH</div>
+            </div>
+            <div>
+              <div style="font-size: 0.75rem; color: var(--text-dim);">Caution Obligatoire</div>
+              <div id="calc-deposit-amount" style="font-size: 1.1rem; font-weight: 800; color: #FFF;">5 000 DH</div>
+            </div>
+            <div>
+              <div style="font-size: 0.75rem; color: var(--text-dim);">Total à Payer</div>
+              <div id="calc-total-amount" style="font-size: 1.4rem; font-weight: 900; color: #10B981;">0 DH</div>
+            </div>
+            <div>
+              <div style="font-size: 0.75rem; color: var(--text-dim);">Solde Restant</div>
+              <div id="calc-remaining-balance" style="font-size: 1.1rem; font-weight: 800; color: var(--gold-400);">0 DH</div>
+            </div>
+          </div>
+
+          <div class="modal-footer" style="padding: 16px 0 0 0; margin-top: 20px; background: transparent; border: none;">
+            <button type="button" class="btn btn-secondary modal-close">Annuler</button>
+            <button type="submit" class="btn btn-primary">Valider & Enregistrer la Réservation</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MODAL 2 : CONTRAT OFFICIEL, INSPECTION & SIGNATURE NUMÉRIQUE
+       ======================================================================== -->
+  <div id="modal-contract" class="modal-backdrop">
+    <div class="modal-dialog modal-xl">
+      <div class="modal-header">
+        <h3 class="modal-title">Contrat de Location Officiel & État des Lieux</h3>
+        <button class="modal-close" type="button">&times;</button>
+      </div>
+
+      <div class="modal-body" style="background: #F1F5F9; padding: 24px;">
+        
+        <!-- DOCUMENT IMPRIMABLE A4 -->
+        <div id="printable-contract-doc" class="contract-document">
+          
+          <!-- En-tête officiel Errouga Car -->
+          <div class="contract-header">
+            <div class="contract-agency-info">
+              <h2>ERROUGA CAR AGENCY</h2>
+              <p><strong>Propriétaire & Gérant :</strong> Mohamed Rouga</p>
+              <p>📍 Boulevard Mohammed VI, Guéliz, Marrakech - Maroc</p>
+              <p>📞 Tél/WhatsApp : +212 660-990242 / +212 714-876077 | ✉️ contact@errouga.com</p>
+              <p>RC : 54291 / Marrakech • Patente : 45281902 • IF : 28492014 • ICE : 002849201400088</p>
+            </div>
+            <div class="contract-title-box">
+              <div style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase; color: #475569;">Contrat de Location sans Chauffeur</div>
+              <div class="contract-number" id="contract-view-num">EC-2026/089</div>
+              <div style="font-size: 0.8rem; color: #64748B;">Date : <span id="contract-view-date">11/09/2026</span></div>
+            </div>
+          </div>
+
+          <!-- Grille Locataire et Véhicule -->
+          <div class="contract-grid-2col">
+            <!-- Locataire -->
+            <div class="contract-box">
+              <div class="contract-box-title">👤 Locataire Principal (Client)</div>
+              <p><strong>Nom & Prénom :</strong> <span id="contract-client-name">-</span></p>
+              <p><strong>Nationalité :</strong> <span id="contract-client-nat">-</span></p>
+              <p><strong>Pièce d'Identité :</strong> <span id="contract-client-id">-</span></p>
+              <p><strong>Permis de Conduire :</strong> <span id="contract-client-permis">-</span></p>
+              <p><strong>Téléphone :</strong> <span id="contract-client-phone">-</span></p>
+              <p><strong>Adresse de Résidence :</strong> <span id="contract-client-address">-</span></p>
+            </div>
+
+            <!-- Véhicule -->
+            <div class="contract-box">
+              <div class="contract-box-title">🚗 Véhicule Loué</div>
+              <p><strong>Marque & Modèle :</strong> <span id="contract-car-model">-</span></p>
+              <p><strong>Immatriculation :</strong> <span id="contract-car-matricule" style="font-family: monospace; font-weight: bold;">-</span></p>
+              <p><strong>Carburant :</strong> <span id="contract-car-fuel">Diesel</span></p>
+              <p><strong>Compteur Kilométrique Départ :</strong> <span id="contract-car-km-start">-</span></p>
+              <p><strong>Niveau de Carburant Départ :</strong> <span id="contract-car-fuel-start">4/4 (Plein)</span></p>
+            </div>
+          </div>
+
+          <!-- Dates, Lieux & Modalités Financières -->
+          <div class="contract-grid-2col">
+            <div class="contract-box">
+              <div class="contract-box-title">📍 Prise en charge & Restitution</div>
+              <p><strong>Départ le :</strong> <span id="contract-pickup-date">-</span></p>
+              <p><strong>Lieu de Départ :</strong> <span id="contract-pickup-loc">-</span></p>
+              <p><strong>Retour prévu le :</strong> <span id="contract-dropoff-date">-</span></p>
+              <p><strong>Lieu de Retour :</strong> <span id="contract-dropoff-loc">-</span></p>
+              <p><strong>Durée Totale :</strong> <span id="contract-days-count" style="font-weight: bold;">-</span></p>
+            </div>
+
+            <div class="contract-box">
+              <div class="contract-box-title">💳 Règlement & Caution</div>
+              <p><strong>Tarif Journalier :</strong> <span id="contract-rate-day">-</span></p>
+              <p><strong>Montant Total Location :</strong> <span id="contract-total-amount" style="font-weight: bold; color: #0F172A;">-</span></p>
+              <p><strong>Acompte Reçu :</strong> <span id="contract-paid-amount" style="color: #10B981; font-weight: bold;">-</span></p>
+              <p><strong>Solde Restant à Régler :</strong> <span id="contract-balance-amount" style="font-weight: bold; color: #D97706;">-</span></p>
+              <p><strong>Caution de Garantie :</strong> <span id="contract-deposit-amount">-</span> (<span id="contract-deposit-status">NON ENCAISSÉE</span>)</p>
+            </div>
+          </div>
+
+          <!-- FICHE D'ÉTAT DES LIEUX DE CARROSSERIE (INTERACTIVE BLUEPRINT) -->
+          <div style="border: 1px solid #CBD5E1; border-radius: 6px; padding: 14px; background: #FFF; margin: 16px 0;">
+            <div style="font-size: 0.85rem; font-weight: 800; text-transform: uppercase; color: #0F172A; border-bottom: 1px solid #E2E8F0; padding-bottom: 6px; margin-bottom: 8px;">
+              🔍 Fiche d'État des Lieux du Véhicule au Départ
+            </div>
+            <p style="font-size: 0.72rem; color: #64748B; margin-bottom: 8px;" class="btn-no-print">
+              💡 <em>Cliquez sur le schéma ci-dessous pour repérer et annoter une rayure ou un choc existant :</em>
+            </p>
+
+            <div style="text-align: center;">
+              <!-- Schéma SVG de la voiture vue de dessus / faces -->
+              <svg id="inspection-blueprint-svg" viewBox="0 0 700 240" style="max-width: 100%; height: 180px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; cursor: crosshair;" onclick="ContractModule.addDamageMarker(event)">
+                <!-- Vue latérale et dessus d'un véhicule standard stylisé -->
+                <g fill="#CBD5E1" stroke="#475569" stroke-width="2">
+                  <!-- Vue de dessus Silhouette -->
+                  <path d="M 50 120 C 50 50, 90 40, 160 40 L 440 40 C 510 40, 550 50, 550 120 C 550 190, 510 200, 440 200 L 160 200 C 90 200, 50 190, 50 120 Z" fill="#F1F5F9" />
+                  <!-- Pare-brise avant -->
+                  <path d="M 180 55 C 220 55, 230 70, 230 120 C 230 170, 220 185, 180 185 Z" fill="#E2E8F0" />
+                  <!-- Toit -->
+                  <rect x="240" y="55" width="160" height="130" rx="10" fill="#E2E8F0" />
+                  <!-- Lunette arrière -->
+                  <path d="M 420 55 C 450 55, 460 70, 460 120 C 460 170, 450 185, 420 185 Z" fill="#E2E8F0" />
+                  <!-- Roues -->
+                  <rect x="130" y="30" width="45" height="15" rx="3" fill="#1E293B" />
+                  <rect x="420" y="30" width="45" height="15" rx="3" fill="#1E293B" />
+                  <rect x="130" y="195" width="45" height="15" rx="3" fill="#1E293B" />
+                  <rect x="420" y="195" width="45" height="15" rx="3" fill="#1E293B" />
+                  <!-- Rétroviseurs -->
+                  <ellipse cx="200" cy="35" rx="12" ry="6" fill="#64748B" />
+                  <ellipse cx="200" cy="205" rx="12" ry="6" fill="#64748B" />
+                </g>
+                <text x="70" y="125" font-size="12" font-weight="bold" fill="#64748B">AVANT</text>
+                <text x="500" y="125" font-size="12" font-weight="bold" fill="#64748B">ARRIÈRE</text>
+                <!-- Calque des repères ajoutés -->
+                <g id="damage-markers-layer"></g>
+              </svg>
+            </div>
+
+            <!-- Liste des dégâts relevés -->
+            <table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.78rem;">
+              <tbody id="contract-damages-list"></tbody>
+            </table>
+          </div>
+
+          <!-- Mentions légales & Conditions Générales Maroc -->
+          <div class="contract-terms-box">
+            <strong>CONDITIONS GÉNÉRALES DE LOCATION (EXTRAIT OFFICIEL MAROC) :</strong><br>
+            1. Le véhicule est remis en parfait état de marche et de propreté avec les documents de bord originaux.<br>
+            2. Le locataire déclare être titulaire d'un permis de conduire en cours de validité depuis plus de 2 ans.<br>
+            3. Il est formellement interdit de sous-louer le véhicule ou de le conduire sur les pistes non carrossables sans option tout-terrain.<br>
+            4. En cas d'accident, un constat amiable ou procès-verbal de police/gendarmerie doit impérativement être transmis sous 48h.<br>
+            5. Le carburant est à la charge du locataire. La caution sera restituée après inspection contradictoire au retour.
+          </div>
+
+          <!-- Observations particulières -->
+          <div style="font-size: 0.78rem; color: #475569; margin-bottom: 14px;">
+            <strong>Observations & Particularités :</strong> <span id="contract-notes-text">Néant</span>
+          </div>
+
+          <!-- Zones de signature -->
+          <div class="contract-signatures">
+            <div class="signature-zone">
+              <span class="signature-label">Le Locataire (Précédé de "Lu et approuvé")</span>
+              <div style="font-size: 0.7rem; color: #94A3B8; text-align: center; margin-top: 18px;">
+                Signature manuscrite ou numérique :
+              </div>
+              <div id="contract-signature-preview" style="height: 50px; text-align: center;"></div>
+            </div>
+
+            <div class="signature-zone" style="text-align: right;">
+              <span class="signature-label">Pour l'Agence ERROUGA CAR</span>
+              <div style="font-size: 0.75rem; color: #0F172A; font-weight: bold; margin-top: 10px;">
+                M. Mohamed Rouga<br>
+                <span style="font-size: 0.68rem; color: #64748B;">Directeur Général</span>
+              </div>
+              <div style="margin-top: 6px; font-family: cursive; font-size: 1.1rem; color: #2563EB;">
+                M. Rouga
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ZONE DE SIGNATURE DIGITALE INTERACTIVE (HORS IMPRESSION) -->
+        <div class="btn-no-print" style="margin-top: 24px; background: #0F172A; border-radius: var(--radius-md); padding: 18px; border: 1px solid var(--border-highlight);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <span style="font-size: 0.9rem; font-weight: 800; color: #FFF;">✍️ Signature Numérique Tactile / Souris du Client :</span>
+            <button id="btn-clear-signature" class="btn btn-sm btn-secondary" type="button">Effacer la signature</button>
+          </div>
+          <div class="signature-box">
+            <canvas id="signature-canvas" class="signature-canvas"></canvas>
+            <div class="signature-toolbar">
+              <span>Signez avec le doigt (sur tablette / mobile) ou avec la souris</span>
+              <span style="color: #10B981; font-weight: 700;">Prêt pour enregistrement</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary modal-close">Fermer</button>
+        <button id="btn-save-contract" class="btn btn-secondary" type="button">💾 Enregistrer Signature & État des Lieux</button>
+        <button id="btn-print-contract" class="btn btn-primary" type="button">🖨️ Imprimer le Contrat Officiel (A4 / PDF)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MODAL 3 : AJOUT D'UN VÉHICULE À LA FLOTTE
+       ======================================================================== -->
+  <div id="modal-add-car" class="modal-backdrop">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title">Ajouter un Véhicule à la Flotte Errouga</h3>
+        <button class="modal-close" type="button">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="form-add-car">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+            <div class="form-group">
+              <label class="form-label">Marque *</label>
+              <input type="text" id="add-car-brand" class="form-control" placeholder="ex: Dacia" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Modèle *</label>
+              <input type="text" id="add-car-model" class="form-control" placeholder="ex: Sandero Stepway" required>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+            <div class="form-group">
+              <label class="form-label">Immatriculation *</label>
+              <input type="text" id="add-car-matricule" class="form-control" placeholder="ex: 67890-A-26" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Catégorie</label>
+              <select id="add-car-category" class="form-control">
+                <option value="Économique / Citadine">Économique / Citadine</option>
+                <option value="Berline Confort">Berline Confort</option>
+                <option value="SUV Tout-Chemin">SUV Tout-Chemin</option>
+                <option value="Luxe & Prestige">Luxe & Prestige</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+            <div class="form-group">
+              <label class="form-label">Carburant</label>
+              <select id="add-car-fuel" class="form-control">
+                <option value="Diesel">Diesel</option>
+                <option value="Essence">Essence</option>
+                <option value="Hybride">Hybride</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Boîte de vitesse</label>
+              <select id="add-car-gearbox" class="form-control">
+                <option value="Manuelle">Manuelle</option>
+                <option value="Automatique">Automatique</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+            <div class="form-group">
+              <label class="form-label">Prix / Jour (DH) *</label>
+              <input type="number" id="add-car-price" class="form-control" value="350" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Caution (DH) *</label>
+              <input type="number" id="add-car-deposit" class="form-control" value="5000" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Kilométrage actuel</label>
+              <input type="number" id="add-car-mileage" class="form-control" value="30000">
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 20px;">
+            <label class="form-label">Image du Véhicule (Chemin local ou URL)</label>
+            <input type="text" id="add-car-img" class="form-control" placeholder="assets/images/clio_5_1.jpg ou URL" value="assets/images/clio_5_1.jpg">
+          </div>
+
+          <div class="modal-footer" style="padding: 16px 0 0 0; background: transparent; border: none;">
+            <button type="button" class="btn btn-secondary modal-close">Annuler</button>
+            <button type="submit" class="btn btn-primary">Ajouter à la Flotte</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MODAL 4 : CHECK-IN / CHECK-OUT RAPIDE
+       ======================================================================== -->
+  <div id="modal-checkin-checkout" class="modal-backdrop">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title" id="check-modal-title">Validation Opérationnelle</h3>
+        <button class="modal-close" type="button">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p id="check-modal-sub" style="font-size: 0.85rem; color: var(--gold-400); font-weight: 700; margin-bottom: 18px;"></p>
+        <form id="form-checkin-checkout">
+          <div class="form-group" style="margin-bottom: 16px;">
+            <label class="form-label" id="check-km-label">Relevé Kilométrique *</label>
+            <input type="number" id="check-km-input" class="form-control" required>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 16px;">
+            <label class="form-label">Niveau de Carburant</label>
+            <select id="check-fuel-select" class="form-control">
+              <option value="4/4">4/4 (Plein complet)</option>
+              <option value="3/4">3/4 de réservoir</option>
+              <option value="1/2">1/2 (Moitié)</option>
+              <option value="1/4">1/4 de réservoir</option>
+            </select>
+          </div>
+
+          <div id="check-deposit-group" class="form-group" style="margin-bottom: 20px; display: none;">
+            <label class="form-label">Traitement de la Caution de Garantie</label>
+            <select id="check-deposit-action" class="form-control">
+              <option value="restituee">✅ Restituer la caution intégralement (Véhicule conforme)</option>
+              <option value="retenue">⚠️ Retenir la caution pour frais / dégâts constatés</option>
+            </select>
+          </div>
+
+          <div class="modal-footer" style="padding: 14px 0 0 0; background: transparent; border: none;">
+            <button type="button" class="btn btn-secondary modal-close">Annuler</button>
+            <button type="submit" id="btn-submit-check" class="btn btn-primary">Confirmer</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/data.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/booking.js"></script>
+  <script src="js/contract.js"></script>
+  <script src="js/app.js"></script>
+
+  <script>
+    window.addEventListener("DOMContentLoaded", () => {
+      AuthModule.init();
+      BookingModule.init();
+      ContractModule.init();
+      AppModule.init();
+    });
+  </script>
+</body>
+</html>
